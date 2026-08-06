@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel Reader — Vietnamese first, English second</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --porcelain:#FBFCF9; --celadon:#DDE7DE; --celadon-2:#CBDACD; --rule:#B6C9B9;
+    --ink:#15201C; --ink-soft:#4E5F57;
+    --son:#B93B26; --cham:#26467E; --gold:#B8871B; --radius:3px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:linear-gradient(180deg,var(--celadon) 0 42vh,#E7EFE8 100%);background-attachment:fixed;
+    color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;font-size:16px;line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(16px,4vw,40px) 96px}
+
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink-soft);margin:0 0 14px}
+  h1{font-family:"Newsreader",Georgia,serif;font-weight:400;font-size:clamp(38px,6.4vw,68px);
+    line-height:1.02;letter-spacing:-.015em;margin:0 0 16px}
+  h1 em{font-style:italic;color:var(--son)}
+  .lede{max-width:54ch;color:var(--ink-soft);margin:0 0 34px;font-size:clamp(15px,1.6vw,17px)}
+
+  .panel{background:var(--porcelain);border:1px solid var(--rule);border-radius:var(--radius);
+    padding:clamp(16px,3vw,26px);box-shadow:0 1px 0 rgba(21,32,28,.05)}
+  label.field{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px}
+  textarea{width:100%;min-height:172px;resize:vertical;padding:14px 16px;border:1px solid var(--celadon-2);
+    border-radius:var(--radius);background:#fff;font-family:"Be Vietnam Pro",sans-serif;
+    font-size:15.5px;line-height:1.65;color:var(--ink)}
+  textarea:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+    outline:2px solid var(--gold);outline-offset:2px}
+  textarea.drop-active{border-color:var(--son);background:#FFF8F6;
+    box-shadow:inset 0 0 0 2px rgba(185,59,38,.18)}
+  .panel-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+
+  button{font-family:inherit;font-size:14px;cursor:pointer;border-radius:var(--radius);
+    border:1px solid var(--rule);background:#fff;color:var(--ink);padding:9px 14px;
+    transition:background .15s ease,color .15s ease,border-color .15s ease}
+  button:hover{background:#F1F5F1}
+  button[disabled]{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--ink);border-color:var(--ink);color:#F3F7F3;font-weight:500;padding:10px 20px}
+  .primary:hover{background:#22322C}
+  .ghost{background:transparent;border-color:transparent;color:var(--ink-soft);text-decoration:underline;
+    text-underline-offset:3px;padding:9px 6px}
+  .ghost:hover{background:transparent;color:var(--son)}
+
+  .transport{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;margin:34px 0 6px;
+    padding:14px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .transport .group{display:flex;align-items:center;gap:8px}
+  .cap{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-soft)}
+  .toggle{display:flex;align-items:center;gap:7px;cursor:pointer}
+  .toggle input{accent-color:var(--son);width:15px;height:15px}
+  select{font-family:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--celadon-2);
+    border-radius:var(--radius);background:#fff;color:var(--ink);max-width:190px}
+  input[type=range]{width:110px;accent-color:var(--son)}
+  .note{font-size:13px;color:var(--ink-soft);margin:10px 0 0}
+  .note strong{color:var(--son);font-weight:500}
+  .note code{font-family:"JetBrains Mono",monospace;font-size:12px;background:#fff;padding:2px 5px;
+    border:1px solid var(--celadon-2);border-radius:2px;user-select:all}
+  .note button{font-size:13px;padding:4px 10px;margin-left:4px}
+
+  .sheet{margin-top:26px}
+  .empty{border:1px dashed var(--rule);border-radius:var(--radius);padding:44px 24px;text-align:center;
+    color:var(--ink-soft);background:rgba(251,252,249,.55)}
+  .pair{display:grid;grid-template-columns:52px 1fr;position:relative}
+  .rail{position:relative;padding-top:18px}
+  .rail::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--rule)}
+  .pair:first-child .rail::before{top:16px}
+  .pair:last-child .rail::before{bottom:auto;height:22px}
+  .idx{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-soft);position:relative;z-index:1;
+    background:#E4EDE5;display:inline-block;padding:2px 0;width:31px;text-align:center}
+  .dot{position:absolute;left:11px;top:23px;width:9px;height:9px;border-radius:50%;background:var(--gold);
+    opacity:0;transform:scale(.4);transition:opacity .2s,transform .2s;z-index:2}
+  .pair.active .dot{opacity:1;transform:scale(1)}
+  .pair.active .idx{color:var(--ink)}
+
+  .lines{padding:14px 0 18px;border-bottom:1px solid var(--celadon-2)}
+  .pair:last-child .lines{border-bottom:none}
+  .line{display:grid;grid-template-columns:34px 1fr 34px;align-items:start;gap:10px;padding:6px 0}
+  .tag{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;padding-top:5px}
+  .line.vi .tag{color:var(--son)}
+  .line.en .tag{color:var(--cham)}
+  .txt{margin:0;font-size:17px}
+  .line.vi .txt{font-family:"Newsreader",Georgia,serif;font-size:19.5px;line-height:1.5}
+  .line.en .txt{color:var(--ink-soft);font-size:16px}
+  .line.speaking .txt{color:var(--ink)}
+  .txt mark{background:rgba(184,135,27,.22);color:inherit;border-radius:2px;padding:1px 0}
+  .sheet.hide-en .line.en:not(.revealed) .txt{color:transparent;background:var(--celadon-2);
+    box-shadow:inset 0 0 0 1px var(--rule);border-radius:2px;cursor:pointer;user-select:none}
+  .sheet.hide-en .line.en:not(.revealed) .txt mark{background:transparent}
+  .sheet.hide-en .line.en:not(.revealed) .txt:hover{background:#BFD1C2}
+  .line.pending .txt{color:var(--ink-soft);opacity:.55;font-style:italic}
+  .line.pending .say{visibility:hidden}
+  .line.failed .txt{color:var(--son);font-style:italic;font-size:15px}
+  .say{width:30px;height:30px;padding:0;display:grid;place-items:center;border-radius:50%;
+    border:1px solid var(--celadon-2);background:#fff;opacity:.45;transition:opacity .15s,border-color .15s}
+  .pair:hover .say,.say:focus-visible{opacity:1}
+  .line.vi .say:hover{border-color:var(--son)}
+  .line.en .say:hover{border-color:var(--cham)}
+  .say svg{width:9px;height:11px}
+  .line.vi .say svg{fill:var(--son)}
+  .line.en .say svg{fill:var(--cham)}
+  .line.speaking .say{opacity:1;border-color:var(--gold)}
+
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-size:13px;
+    color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:6px 18px}
+
+  @media (max-width:640px){
+    .pair{grid-template-columns:38px 1fr}
+    .rail::before{left:10px}
+    .idx{width:22px;font-size:10px}
+    .dot{left:6px}
+    .line{grid-template-columns:30px 1fr 30px;gap:8px}
+    .say{opacity:1}
+    input[type=range]{width:88px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Vietnamese first · English second</p>
+  <h1>Read <em>side by side</em></h1>
+  <p class="lede">Paste a transcript with the two languages tangled together — even when English and Vietnamese collide mid-line. This page scans word by word to find where the language switches, puts Vietnamese on top, English underneath, and reads both aloud in the right voice.</p>
+
+  <section class="panel">
+    <label class="field" for="src">Text to arrange</label>
+    <textarea id="src" placeholder="Paste here. No line breaks needed — the page finds the switch points and drops timestamps like 2s or 00:14."></textarea>
+    <div class="panel-actions">
+      <button class="primary" id="build">Arrange &amp; read</button>
+      <button class="ghost" id="demo">Paste example</button>
+      <button class="ghost" id="pickImg">Read image</button>
+      <input type="file" id="imgFile" accept="image/*" hidden>
+      <button class="ghost" id="clear">Clear</button>
+      <button class="ghost" id="copy">Copy arranged text</button>
+    </div>
+    <p class="note" id="ocrStatus"></p>
+  </section>
+
+  <div class="transport">
+    <div class="group">
+      <button id="playAll" disabled>Read all</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+    <div class="group">
+      <span class="cap">Order</span>
+      <select id="mode">
+        <option value="both">Vietnamese, then English</option>
+        <option value="both-en">English, then Vietnamese</option>
+        <option value="vi">Vietnamese only</option>
+        <option value="en">English only</option>
+      </select>
+    </div>
+    <label class="toggle cap"><input type="checkbox" id="rejoin" checked> Rejoin broken lines</label>
+    <label class="toggle cap"><input type="checkbox" id="autoTr" checked> Translate missing side</label>
+    <div class="group">
+      <span class="cap">Speed</span>
+      <input type="range" id="rate" min="0.6" max="1.4" step="0.05" value="1">
+      <span class="cap" id="rateOut">1.00×</span>
+    </div>
+    <div class="group"><span class="cap">VI voice</span><select id="voiceVi"></select></div>
+    <div class="group"><span class="cap">EN voice</span><select id="voiceEn"></select>
+      <button id="testVoice" type="button">Test</button></div>
+  </div>
+  <p class="note" id="voiceNote"></p>
+  <p class="note" id="trStatus"></p>
+
+  <main class="sheet" id="sheet">
+    <div class="empty">Nothing to read yet. Paste a passage above, then press <strong>Arrange &amp; read</strong>.</div>
+  </main>
+
+  <footer>
+    <span>Voices come from your browser — Chrome or Edge works best.</span>
+    <span>Click ▶ at the end of a line to hear just that line.</span>
+    <span>Paste or drop a screenshot into the box to pull its text out.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SAMPLE = "Welcome back. Good Tuesday morning everybody. Thanks so much for joining us Chào mừng bạn trở lại. Chào buổi sáng thứ Ba tốt lành mọi người. Cảm ơn quý vị đã tham gia cùng chúng tôi 2s this morning. I'm Maria Bartu Romo and it is Tuesday, August 4th. It is 8 a.m. sáng nay. Tôi là Maria Bartu Romo và hôm nay là thứ Ba, ngày 4 tháng 8. Đúng 8 giờ sáng theo";
+
+  var $ = function(s){ return document.querySelector(s); };
+  var sheet = $("#sheet"), srcEl = $("#src"), rateEl = $("#rate"), rateOut = $("#rateOut");
+  var modeEl = $("#mode"), rejoinEl = $("#rejoin");
+  var autoTr = $("#autoTr"), trStatus = $("#trStatus");
+  var voiceViEl = $("#voiceVi"), voiceEnEl = $("#voiceEn"), voiceNote = $("#voiceNote");
+  var btnPlayAll = $("#playAll"), btnPause = $("#pause"), btnStop = $("#stop");
+
+  /* ---------- nhận biết ngôn ngữ ở mức từng chữ ---------- */
+  var DIA = /[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]/i;
+  var VI_SYLL = /^(ngh|ng|nh|ch|gh|kh|ph|th|tr|gi|qu|[bcdghklmnpqrstvx])?[aeiouy]+(ch|ng|nh|[cmnpt])?$/;
+  var VI_WORDS = new Set("la co khong duoc cua va cac nhung nguoi trong nay cho toi ban chung mot da voi rat nhu khi vi de neu thi ma o anh chi em ong ba quy vi xin cam on chao buoi sang hom qua mai gio ngay thang nam tuan cung tren duoi ra vao len xuong roi day do se dang cu con hay hon nua tat ca moi minh nao sao vay the boi tuy tuong noi lam biet nghe hieu".split(" "));
+  var EN_WORDS = new Set("the a an and or but of to in on at for with from by is are was were be been being am this that these those you i we they he she it his her our your their them have has had do does did not no so much very back good morning evening night thanks thank welcome everybody everyone joining us about what when where how who why can will would could should there here today tomorrow yesterday out up down over more most just like get got make made say said know think see look come go time year day week month people them then than only other others many some any because before after into under also even still well done going want need seen way thing part group country different secretly influence speak new right absolutely try trying said says while during between across around through against without within upon such each both few every another".split(" "));
+
+  function strip(s){
+    return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D");
+  }
+  function score(tok){
+    var raw = tok.toLowerCase();
+    var core = raw.replace(/^[^a-zà-ỹđ0-9']+|[^a-zà-ỹđ0-9']+$/gi,"");
+    var vi = 0, en = 0;
+    if(!core) return { vi: vi, en: en };
+    if(DIA.test(core)) vi += 3.5;
+    var plain = strip(core).replace(/[^a-z0-9']/g,"");
+    if(!plain) return { vi: vi, en: en };
+    if(VI_WORDS.has(plain)) vi += 1.5;
+    if(EN_WORDS.has(plain)) en += 2.5;
+    if(/[fjwz]/.test(plain)) en += 2;
+    if(/'/.test(plain)) en += 1.5;
+    if(/(ing|tion|ed|ly|ness|ment|ers?|est)$/.test(plain) && plain.length > 4) en += 1;
+    if(/^[a-z]+$/.test(plain)){ if(VI_SYLL.test(plain)) vi += 0.3; else en += 1; }
+    return { vi: vi, en: en };
+  }
+
+  /* Viterbi: chọn cách gán nhãn tốt nhất, phạt mỗi lần đổi ngôn ngữ
+     -> tên riêng (Maria, Romo) không làm cắt nhầm giữa câu tiếng Việt */
+  function segment(tokens, breaks){
+    var n = tokens.length; if(!n) return [];
+    var L = 5, s = tokens.map(score), bp = [];
+    var dv = s[0].vi, de = s[0].en;
+    for(var i = 1; i < n; i++){
+      var pen = breaks[i] ? 1 : L;
+      var stayV = dv, swV = de - pen, stayE = de, swE = dv - pen;
+      var nv = s[i].vi + Math.max(stayV, swV);
+      var ne = s[i].en + Math.max(stayE, swE);
+      bp.push({ v: stayV >= swV ? "vi" : "en", e: stayE >= swE ? "en" : "vi" });
+      dv = nv; de = ne;
+    }
+    var lab = new Array(n);
+    lab[n-1] = dv >= de ? "vi" : "en";
+    for(var j = n-1; j > 0; j--) lab[j-1] = bp[j-1][lab[j] === "vi" ? "v" : "e"];
+    return lab;
+  }
+
+  /* Chữ đơn lẻ nằm sát ranh giới nhưng điểm số nghiêng hẳn về bên kia -> trả về đúng bên */
+  function repairEdges(tokens, lab){
+    var s = tokens.map(score);
+    for(var i = 0; i < lab.length; i++){
+      var other = lab[i] === "vi" ? "en" : "vi";
+      var prev = i > 0 ? lab[i-1] : null, next = i < lab.length - 1 ? lab[i+1] : null;
+      var atEdge = (prev === other && next !== other) || (next === other && prev !== other);
+      if(!atEdge) continue;
+      var d = other === "en" ? s[i].en - s[i].vi : s[i].vi - s[i].en;
+      if(d >= 2) lab[i] = other;
+    }
+    return lab;
+  }
+
+  var TIMESTAMP = /^(\[?\d{1,2}:\d{2}(:\d{2})?([.,]\d{1,3})?\]?|\(?\d+(\.\d+)?s\)?|-->)$/i;
+
+  function splitSentences(t){
+    var parts = t.split(/(?<=[.!?…])\s+(?=\S)/).map(function(x){ return x.trim(); }).filter(Boolean);
+    var out = [];
+    parts.forEach(function(p){                    /* mảnh quá ngắn hoặc mở đầu bằng số -> nhập vào mảnh trước */
+      var words = p.split(/\s+/).length;
+      if(out.length && (words < 3 || /^[0-9]/.test(p))) out[out.length-1] += " " + p;
+      else out.push(p);
+    });
+    return out.length ? out : [t];
+  }
+
+  /* Gộp các cặp mảnh LIỀN KỀ cho tới khi cả hai bên cùng kết thúc bằng dấu câu.
+     Không bao giờ đổi thứ tự -> không thể trôi lệch nhịp. */
+  function endsClean(s){
+    s = (s || "").trim();
+    return !s || /[.!?…]["'”’)\]]?$/.test(s);
+  }
+  function mergeChunks(list){
+    var out = [], bv = "", be = "";
+    list.forEach(function(p, i){
+      bv = (bv ? bv + " " : "") + (p.vi || "");
+      be = (be ? be + " " : "") + (p.en || "");
+      bv = bv.trim(); be = be.trim();
+      if((endsClean(bv) && endsClean(be)) || i === list.length - 1){
+        if(bv || be) out.push({ vi: bv, en: be });
+        bv = ""; be = "";
+      }
+    });
+    return out;
+  }
+
+  /* Căn câu theo độ dài (kiểu Gale–Church). Cho phép 1-1, 1-2, 2-1, 2-2, 1-0, 0-1.
+     Luôn tiến theo một chiều nên không thể đảo thứ tự. */
+  function alignSentences(a, b){
+    var n = a.length, m = b.length;
+    if(!n || !m) return [{ vi: a.join(" "), en: b.join(" ") }];
+    var la = a.map(function(s){ return s.length; }), lb = b.map(function(s){ return s.length; });
+    var ta = 0, tb = 0;
+    la.forEach(function(x){ ta += x; }); lb.forEach(function(x){ tb += x; });
+    var r = (ta || 1) / (tb || 1);
+    function cost(sa, sb){
+      return Math.abs(sa - sb * r) / Math.sqrt(sa + sb * r + 1);
+    }
+    var INF = 1e9, D = [], B = [], i, j;
+    for(i = 0; i <= n; i++){
+      D.push(new Array(m + 1)); B.push(new Array(m + 1));
+      for(j = 0; j <= m; j++){ D[i][j] = INF; B[i][j] = null; }
+    }
+    D[0][0] = 0;
+    var MOVES = [[1,1,0], [1,2,2.4], [2,1,2.4], [2,2,3.0], [1,0,5.5], [0,1,5.5]];
+    for(i = 0; i <= n; i++) for(j = 0; j <= m; j++){
+      if(D[i][j] >= INF) continue;
+      for(var k = 0; k < MOVES.length; k++){
+        var di = MOVES[k][0], dj = MOVES[k][1], pen = MOVES[k][2];
+        if(i + di > n || j + dj > m) continue;
+        var sa = 0, sb = 0, q;
+        for(q = 0; q < di; q++) sa += la[i+q];
+        for(q = 0; q < dj; q++) sb += lb[j+q];
+        var c = D[i][j] + cost(sa, sb) + pen;
+        if(c < D[i+di][j+dj]){ D[i+di][j+dj] = c; B[i+di][j+dj] = [i, j, di, dj]; }
+      }
+    }
+    var out = [], ci = n, cj = m, guard = 0;
+    while((ci > 0 || cj > 0) && guard++ < n + m + 5){
+      var bk = B[ci][cj];
+      if(!bk) return [{ vi: a.join(" "), en: b.join(" ") }];
+      out.unshift({ vi: a.slice(bk[0], bk[0]+bk[2]).join(" "), en: b.slice(bk[1], bk[1]+bk[3]).join(" ") });
+      ci = bk[0]; cj = bk[1];
+    }
+    return out.length ? out : [{ vi: a.join(" "), en: b.join(" ") }];
+  }
+
+  function align(vi, en){
+    var a = splitSentences(vi), b = splitSentences(en);
+    if(a.length <= 1 && b.length <= 1) return [{ vi: vi, en: en }];
+    if(a.length === b.length)
+      return a.map(function(s, i){ return { vi: s, en: b[i] }; });
+    return alignSentences(a, b);
+  }
+
+  function parse(raw){
+    var tokens = [], breaks = [];
+    raw.split(/\r?\n/).forEach(function(line, li){
+      var t = line.trim();
+      if(!t) return;
+      if(/^\d{1,4}$/.test(t)) return;                 /* dòng chỉ có số = mốc/chỉ số phụ đề */
+      t = t.replace(/>{2,}/g, " ").trim();            /* dấu >> của người nói trong phụ đề */
+      if(!t) return;
+      t.split(/\s+/).filter(Boolean).forEach(function(tk, ti){
+        if(TIMESTAMP.test(tk)) return;
+        tokens.push(tk);
+        breaks.push(ti === 0 && li > 0);
+      });
+    });
+    if(!tokens.length) return [];
+    var lab = repairEdges(tokens, segment(tokens, breaks)), runs = [];
+    tokens.forEach(function(t, i){
+      var last = runs[runs.length-1];
+      if(last && last.lang === lab[i]) last.text += " " + t;
+      else runs.push({ lang: lab[i], text: t });
+    });
+    var pairs = [];
+    for(var i = 0; i < runs.length; i++){
+      var b = runs[i], n = runs[i+1];
+      if(n && n.lang !== b.lang){
+        pairs.push({ vi: b.lang === "vi" ? b.text : n.text, en: b.lang === "en" ? b.text : n.text });
+        i++;
+      } else {
+        pairs.push(b.lang === "vi" ? { vi: b.text, en: "" } : { vi: "", en: b.text });
+      }
+    }
+    if(rejoinEl.checked) pairs = mergeChunks(pairs);
+    var out = [];
+    pairs.forEach(function(p){
+      if(p.vi && p.en) out.push.apply(out, align(p.vi, p.en));
+      else out.push(p);
+    });
+    return out;
+  }
+
+  /* ---------- đoạn chỉ có một thứ tiếng: tách câu để chờ dịch ---------- */
+  function autoPairs(pairs){
+    var out = [];
+    pairs.forEach(function(p){
+      if(p.vi && p.en){ out.push(p); return; }
+      var have = p.vi ? "vi" : "en", need = have === "vi" ? "en" : "vi";
+      var sents = splitSentences(p.vi || p.en), merged = [];
+      sents.forEach(function(s){
+        if(merged.length && s.length < 15) merged[merged.length-1] += " " + s;
+        else merged.push(s);
+      });
+      merged.forEach(function(s){
+        var o = { vi:"", en:"", autoSide: need };
+        o[have] = s;
+        out.push(o);
+      });
+    });
+    return out;
+  }
+
+  /* ---------- dịch máy ---------- */
+  var TR_CACHE = {};
+  function trGoogle(text, from, to){
+    var url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" + from +
+      "&tl=" + to + "&dt=t&q=" + encodeURIComponent(text);
+    return fetch(url).then(function(r){
+      if(!r.ok) throw new Error("Google returned status " + r.status);
+      return r.json();
+    }).then(function(d){
+      if(!d || !d[0] || !d[0].length) throw new Error("Google returned unexpected data");
+      return d[0].map(function(s){ return s[0]; }).join("").trim();
+    });
+  }
+  function trMyMemory(text, from, to){
+    var url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) +
+      "&langpair=" + from + "%7C" + to;
+    return fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      var t = d && d.responseData && d.responseData.translatedText;
+      if(!t) throw new Error("MyMemory returned unexpected data");
+      return t.trim();
+    });
+  }
+  var lastErr = "";
+  function translate(text, from, to){
+    var key = from + ">" + to + "|" + text;
+    if(TR_CACHE[key]) return Promise.resolve(TR_CACHE[key]);
+    return trGoogle(text, from, to).catch(function(e1){
+      return trMyMemory(text, from, to).catch(function(e2){
+        lastErr = e1.message + " / " + e2.message;
+        throw e2;
+      });
+    }).then(function(t){ TR_CACHE[key] = t; return t; });
+  }
+
+  function runTranslation(){
+    var pend = items.filter(function(i){ return i.pending; });
+    if(!pend.length){ trStatus.textContent = ""; return; }
+    var total = pend.length, done = 0, fail = 0, idx = 0;
+    lastErr = "";
+    pend.forEach(function(i){ i.lineEl.classList.remove("failed"); i.txtEl.textContent = "Translating…"; });
+    trStatus.textContent = "Translating 0/" + total + "…";
+    function worker(){
+      if(idx >= pend.length) return Promise.resolve();
+      var it = pend[idx++];
+      return translate(it.srcText, it.from, it.to).then(function(t){
+        it.text = t; it.pending = false;
+        it.txtEl.textContent = t;
+        it.lineEl.classList.remove("pending");
+      }, function(){
+        fail++;
+        it.lineEl.classList.add("failed");
+        it.txtEl.textContent = "— translation failed —";
+      }).then(function(){
+        done++;
+        trStatus.textContent = "Translating " + done + "/" + total + "…";
+        return worker();
+      });
+    }
+    var ws = [];
+    for(var k = 0; k < 3; k++) ws.push(worker());
+    Promise.all(ws).then(function(){
+      if(!fail){
+        trStatus.innerHTML = 'Machine-translated ' + total + ' lines — marked with <strong>°</strong>. Read them over before using them for coursework.';
+        return;
+      }
+      var msg = '<strong>' + fail + '/' + total + ' lines could not be translated.</strong> ';
+      if(location.protocol === "file:")
+        msg += 'The page is open over file://, so the browser blocks calls to the translation server. Open Terminal, run <code>cd ~/Documents/SongNgu</code> then <code>python3 -m http.server 8000</code>, and visit <code>http://localhost:8000/doc-song-ngu.html</code>.';
+      else msg += 'Check your internet connection. On a work network the translation server may be blocked.';
+      msg += ' <button id="retryTr" type="button">Try again</button>';
+      if(lastErr) msg += '<br><span style="opacity:.7">Details: ' + esc(lastErr) + '</span>';
+      trStatus.innerHTML = msg;
+      var rb = document.getElementById("retryTr");
+      if(rb) rb.addEventListener("click", runTranslation);
+    });
+  }
+
+  /* ---------- dựng trang ---------- */
+  function esc(s){ return s.replace(/[&<>]/g, function(c){ return { "&":"&amp;","<":"&lt;",">":"&gt;" }[c]; }); }
+  var PLAY = '<svg viewBox="0 0 9 11" aria-hidden="true"><path d="M0 0l9 5.5L0 11z"/></svg>';
+  var items = [];
+
+  function render(pairs){
+    items = []; sheet.innerHTML = "";
+    if(!pairs.length){
+      sheet.innerHTML = '<div class="empty">No content found. Check the text you pasted.</div>';
+      setTransport(false); return;
+    }
+    var frag = document.createDocumentFragment();
+    pairs.forEach(function(p, i){
+      var pair = document.createElement("article");
+      pair.className = "pair";
+      pair.innerHTML = '<div class="rail"><span class="idx">' + String(i+1).padStart(2,"0") +
+        '</span><span class="dot"></span></div><div class="lines"></div>';
+      var lines = pair.querySelector(".lines");
+      [["vi","en","VI"], ["en","vi","EN"]].forEach(function(cfg){
+        var lang = cfg[0], other = cfg[1], tag = cfg[2];
+        var text = p[lang], pending = false;
+        if(!text){
+          if(p.autoSide !== lang || !p[other]) return;
+          pending = true;
+        }
+        var row = document.createElement("div");
+        row.className = "line " + lang + (pending ? " pending" : "");
+        row.innerHTML = '<span class="tag"' + (pending ? ' title="Machine translation"' : '') + '>' +
+          tag + (pending ? "°" : "") + '</span><p class="txt" lang="' + lang + '">' +
+          (pending ? "Translating…" : esc(text)) +
+          '</p><button class="say" type="button" aria-label="Read line ' + tag + ' no. ' + (i+1) + '">' + PLAY + '</button>';
+        lines.appendChild(row);
+        var item = { lang: lang, text: pending ? "" : text, txtEl: row.querySelector(".txt"),
+          lineEl: row, pairEl: pair, pending: pending, srcText: p[other], from: other, to: lang };
+        row.querySelector(".say").addEventListener("click", function(){ if(!item.pending) playList([item]); });
+        items.push(item);
+      });
+      frag.appendChild(pair);
+    });
+    sheet.appendChild(frag);
+    setTransport(true);
+  }
+  function setTransport(on){ btnPlayAll.disabled = !on; btnPause.disabled = true; btnStop.disabled = true; }
+
+  /* ---------- đọc to ---------- */
+  var synth = window.speechSynthesis, voices = [], queue = [], qi = 0, playing = false, current = null;
+  var userPaused = false, keepAlive = null, watchdog = null;
+
+  function unstick(){                 /* Chrome kẹt ở trạng thái paused -> im lặng vĩnh viễn */
+    if(!synth) return;
+    try{ synth.cancel(); }catch(e){}
+    try{ synth.resume(); }catch(e){}
+  }
+  function makeUtt(it){
+    var u = new SpeechSynthesisUtterance(it.text);
+    u.lang = it.lang === "vi" ? "vi-VN" : "en-US";
+    var v = voiceFor(it.lang); if(v) u.voice = v;
+    u.rate = parseFloat(rateEl.value);
+    u.onboundary = function(e){ if(e.name && e.name !== "word") return; mark(it, e.charIndex, e.charLength); };
+    return u;
+  }
+
+  function loadVoices(){
+    voices = synth ? synth.getVoices() : [];
+    fill(voiceViEl, voices.filter(function(v){ return /^vi/i.test(v.lang); }));
+    fill(voiceEnEl, voices.filter(function(v){ return /^en/i.test(v.lang); }));
+    var missing = [];
+    if(!voiceViEl.querySelector("option:not([disabled])")) missing.push("Vietnamese");
+    if(!voiceEnEl.querySelector("option:not([disabled])")) missing.push("English");
+    voiceNote.innerHTML = missing.length
+      ? 'No <strong>' + missing.join(" or ") + '</strong> voice on this device. Add one in system settings (macOS: Settings → Accessibility → Spoken Content → Manage Voices; Windows: Settings → Time &amp; language → Speech), then reload the page.'
+      : "";
+  }
+  function fill(sel, list){
+    sel.innerHTML = "";
+    list.forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v.name; o.textContent = v.name.replace(/\s*\(.*?\)\s*$/,"") + " · " + v.lang;
+      sel.appendChild(o);
+    });
+    if(!list.length){
+      var o = document.createElement("option");
+      o.textContent = "— none —"; o.disabled = true; sel.appendChild(o);
+    }
+  }
+  function voiceFor(lang){
+    var name = (lang === "vi" ? voiceViEl : voiceEnEl).value;
+    return voices.filter(function(v){ return v.name === name; })[0] || null;
+  }
+
+  function playList(list){
+    if(!synth){ alert("This browser cannot read text aloud. Use Chrome or Edge."); return; }
+    stopAll();
+    unstick();
+    queue = list; qi = 0; playing = true; userPaused = false;
+    btnPause.disabled = false; btnStop.disabled = false; btnPause.textContent = "Pause";
+    keepAlive = setInterval(function(){          /* Chrome tự ngắt sau ~15 giây */
+      if(playing && !userPaused && synth.speaking){ synth.pause(); synth.resume(); }
+    }, 9000);
+    step();
+  }
+  function step(){
+    if(!playing) return;
+    if(qi >= queue.length){ stopAll(); return; }
+    var it = queue[qi], started = false, retried = false;
+    setActive(it);
+    function fire(){
+      var u = makeUtt(it);
+      u.onstart = function(){ started = true; };
+      u.onend = function(){ started = true; clearTimeout(watchdog); qi++; step(); };
+      u.onerror = function(){ started = true; clearTimeout(watchdog); qi++; step(); };
+      try{ synth.resume(); }catch(e){}
+      synth.speak(u);
+      clearTimeout(watchdog);
+      watchdog = setTimeout(function(){         /* không phát sau 700ms -> gỡ kẹt, thử lại một lần */
+        if(!started && playing && !userPaused && !retried){ retried = true; unstick(); fire(); }
+      }, 700);
+    }
+    fire();
+  }
+  function setActive(it){
+    if(current){
+      current.lineEl.classList.remove("speaking");
+      current.pairEl.classList.remove("active");
+      current.txtEl.textContent = current.text;
+    }
+    current = it;
+    it.lineEl.classList.add("speaking");
+    it.pairEl.classList.add("active");
+    var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(queue.length > 1) it.pairEl.scrollIntoView({ block:"center", behavior: reduce ? "auto" : "smooth" });
+  }
+  function mark(it, start, len){
+    if(typeof start !== "number" || start < 0 || start >= it.text.length) return;
+    if(!len){ var m = it.text.slice(start).match(/^\S+/); len = m ? m[0].length : 0; }
+    if(!len) return;
+    it.txtEl.innerHTML = esc(it.text.slice(0,start)) + "<mark>" + esc(it.text.substr(start,len)) +
+      "</mark>" + esc(it.text.slice(start+len));
+  }
+  function stopAll(){
+    playing = false; userPaused = false;
+    clearInterval(keepAlive); keepAlive = null;
+    clearTimeout(watchdog); watchdog = null;
+    if(synth){ try{ synth.cancel(); synth.resume(); }catch(e){} }
+    if(current){
+      current.lineEl.classList.remove("speaking");
+      current.pairEl.classList.remove("active");
+      current.txtEl.textContent = current.text;
+      current = null;
+    }
+    btnPause.disabled = true; btnStop.disabled = true; btnPause.textContent = "Pause";
+  }
+  function buildQueue(){
+    var mode = modeEl.value;
+    var ready = items.filter(function(i){ return !i.pending && i.text; });
+    if(mode === "vi" || mode === "en") return ready.filter(function(i){ return i.lang === mode; });
+    if(mode === "both") return ready;
+    var out = [], seen = [];
+    ready.forEach(function(i){ if(seen.indexOf(i.pairEl) < 0) seen.push(i.pairEl); });
+    seen.forEach(function(p){
+      var list = ready.filter(function(i){ return i.pairEl === p; });
+      list.filter(function(i){ return i.lang === "en"; }).forEach(function(i){ out.push(i); });
+      list.filter(function(i){ return i.lang === "vi"; }).forEach(function(i){ out.push(i); });
+    });
+    return out;
+  }
+
+  /* ---------- sự kiện ---------- */
+  function build(){
+    stopAll();
+    trStatus.textContent = "";
+    var pairs = parse(srcEl.value);
+    if(autoTr.checked) pairs = autoPairs(pairs);
+    render(pairs);
+    if(autoTr.checked) runTranslation();
+    if(items.length) sheet.scrollIntoView({ block:"start", behavior:"smooth" });
+  }
+  $("#build").addEventListener("click", build);
+  rejoinEl.addEventListener("change", function(){ if(items.length || srcEl.value.trim()) build(); });
+  autoTr.addEventListener("change", function(){ if(items.length || srcEl.value.trim()) build(); });
+  $("#demo").addEventListener("click", function(){ srcEl.value = SAMPLE; srcEl.focus(); });
+  $("#clear").addEventListener("click", function(){
+    stopAll(); srcEl.value = ""; items = [];
+    sheet.innerHTML = '<div class="empty">Nothing to read yet. Paste a passage above, then press <strong>Arrange &amp; read</strong>.</div>';
+    setTransport(false); srcEl.focus();
+  });
+  $("#copy").addEventListener("click", function(e){
+    if(!items.length) return;
+    var text = [], last = null;
+    items.filter(function(i){ return !i.pending && i.text; }).forEach(function(i){
+      if(i.pairEl !== last && last) text.push(""); last = i.pairEl; text.push(i.text);
+    });
+    var btn = e.currentTarget;
+    navigator.clipboard.writeText(text.join("\n")).then(function(){
+      btn.textContent = "Copied";
+      setTimeout(function(){ btn.textContent = "Copy arranged text"; }, 1600);
+    }, function(){
+      btn.textContent = "Copy failed";
+      setTimeout(function(){ btn.textContent = "Copy arranged text"; }, 1600);
+    });
+  });
+
+  /* ---------- đọc chữ từ ảnh (OCR) ---------- */
+  var ocrStatus = $("#ocrStatus"), imgFile = $("#imgFile");
+  var TESS_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+  var tessLoading = null;
+
+  function loadTesseract(){
+    if(window.Tesseract) return Promise.resolve();
+    if(tessLoading) return tessLoading;
+    tessLoading = new Promise(function(res, rej){
+      var sc = document.createElement("script");
+      sc.src = TESS_URL;
+      sc.onload = function(){ res(); };
+      sc.onerror = function(){ tessLoading = null; rej(new Error("could not load the text-recognition library")); };
+      document.head.appendChild(sc);
+    });
+    return tessLoading;
+  }
+
+  /* OCR ngắt dòng theo bề rộng ảnh -> nối lại thành câu liền mạch */
+  function tidyOcr(t){
+    var lines = t.replace(/\r/g,"").split("\n")
+      .map(function(l){ return l.trim(); }).filter(Boolean);
+    var out = [];
+    lines.forEach(function(l){
+      if(!out.length){ out.push(l); return; }
+      var prev = out[out.length-1];
+      if(/[.!?…:"”']$/.test(prev)) out.push(l);
+      else out[out.length-1] = prev + " " + l;
+    });
+    return out.join("\n");
+  }
+
+  function readImage(blob){
+    if(!blob || !/^image\//.test(blob.type || "")){ ocrStatus.textContent = "That file is not an image."; return; }
+    ocrStatus.textContent = "Loading the text reader (first time only, a few MB)…";
+    loadTesseract().then(function(){
+      ocrStatus.textContent = "Reading text from image… 0%";
+      return Tesseract.recognize(blob, "eng+vie", { logger: function(m){
+        if(m.status === "recognizing text")
+          ocrStatus.textContent = "Reading text from image… " + Math.round((m.progress || 0) * 100) + "%";
+        else if(m.status) ocrStatus.textContent = m.status + "…";
+      }});
+    }).then(function(r){
+      var t = tidyOcr((r && r.data && r.data.text) || "");
+      if(!t.trim()){ ocrStatus.textContent = "No text found in that image."; return; }
+      srcEl.value = t;
+      ocrStatus.innerHTML = "Text pulled from the image — <strong>check it for mistakes</strong>, then press Arrange &amp; read again if you edit it.";
+      build();
+    }).catch(function(e){
+      var msg = "Could not read the image: " + esc(e && e.message ? e.message : String(e)) + ".";
+      if(location.protocol === "file:")
+        msg += ' Reading images needs the page served over <code>localhost</code> — see the note below.';
+      ocrStatus.innerHTML = msg;
+    });
+  }
+
+  document.addEventListener("paste", function(e){
+    var list = (e.clipboardData && e.clipboardData.items) || [];
+    for(var i = 0; i < list.length; i++){
+      if(list[i].type && list[i].type.indexOf("image") === 0){
+        var f = list[i].getAsFile();
+        if(f){ e.preventDefault(); readImage(f); return; }
+      }
+    }
+  });
+  ["dragenter","dragover"].forEach(function(ev){
+    srcEl.addEventListener(ev, function(e){ e.preventDefault(); srcEl.classList.add("drop-active"); });
+  });
+  ["dragleave","drop"].forEach(function(ev){
+    srcEl.addEventListener(ev, function(){ srcEl.classList.remove("drop-active"); });
+  });
+  srcEl.addEventListener("drop", function(e){
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f && /^image\//.test(f.type)){ e.preventDefault(); readImage(f); }
+  });
+  $("#pickImg").addEventListener("click", function(){ imgFile.click(); });
+  imgFile.addEventListener("change", function(){
+    if(imgFile.files && imgFile.files[0]) readImage(imgFile.files[0]);
+    imgFile.value = "";
+  });
+
+  btnPlayAll.addEventListener("click", function(){ playList(buildQueue()); });
+  btnStop.addEventListener("click", stopAll);
+  btnPause.addEventListener("click", function(){
+    if(!synth) return;
+    if(synth.paused){ userPaused = false; synth.resume(); btnPause.textContent = "Pause"; }
+    else { userPaused = true; synth.pause(); btnPause.textContent = "Resume"; }
+  });
+  $("#testVoice").addEventListener("click", function(){
+    if(!synth){ alert("This browser cannot read text aloud. Use Chrome or Edge."); return; }
+    unstick();
+    setTimeout(function(){
+      [["vi","Xin chào, đây là giọng tiếng Việt."], ["en","Hello, this is the English voice."]]
+      .forEach(function(c){
+        var u = new SpeechSynthesisUtterance(c[1]);
+        u.lang = c[0] === "vi" ? "vi-VN" : "en-US";
+        var v = voiceFor(c[0]); if(v) u.voice = v;
+        synth.speak(u);
+      });
+      try{ synth.resume(); }catch(e){}
+    }, 120);
+  });
+  rateEl.addEventListener("input", function(){ rateOut.textContent = parseFloat(rateEl.value).toFixed(2) + "×"; });
+
+  if(synth){ loadVoices(); synth.addEventListener("voiceschanged", loadVoices); }
+  else { voiceNote.innerHTML = "This browser cannot read text aloud. Open the page in <strong>Chrome</strong> or <strong>Edge</strong>."; }
+  window.addEventListener("beforeunload", function(){ if(synth) synth.cancel(); });
+
+  srcEl.value = SAMPLE;
+})();
+</script></body></html>
